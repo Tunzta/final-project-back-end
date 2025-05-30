@@ -42,38 +42,53 @@ router.post("/user", async (req, res) => {
 // Login (POST /api/admin/login)
 router.post("/admin/login", async (req, res) => {
   const { login_name, password } = req.body;
-  if (!login_name || !password) return res.status(400).send("Missing fields");
+  if (!login_name || !password)
+    return res.status(400).json({ error: "Missing fields" });
 
   try {
     const user = await User.findOne({ login_name });
     if (!user || user.password !== password)
-      return res.status(400).send("Invalid credentials");
+      return res.status(401).json({ error: "Invalid credentials" });
 
+    // Lưu user_id vào session
     req.session.user_id = user._id;
-    res.send({ _id: user._id, first_name: user.first_name });
+
+    const {
+      _id,
+      first_name,
+      last_name,
+      location,
+      description,
+      occupation,
+      login_name: name,
+    } = user;
+    res.status(200).json({
+      _id,
+      login_name: name,
+      first_name,
+      last_name,
+      location,
+      description,
+      occupation,
+    });
   } catch (err) {
-    res.status(500).send("Login error");
+    res.status(500).json({ error: "Login error" });
   }
 });
 
 // Logout (POST /api/admin/logout)
 router.post("/admin/logout", (req, res) => {
   if (!req.session.user_id) {
-    console.log("Logout attempted but not logged in");
     return res.status(400).json({ error: "Not logged in" });
   }
   req.session.destroy((err) => {
     if (err) {
-      console.error("Session destroy error:", err);
       return res.status(500).json({ error: "Logout failed" });
     }
-    res.clearCookie("connect.sid"); // clear session cookie
-    res.json({ message: "Logged out" });
+    res.status(200).json({ message: "Logout successful" });
+    res.redirect("/");
   });
 });
-
-
-
 
 // Danh sách người dùng (GET /api/user/list)
 router.get("/user/list", async (req, res) => {
@@ -91,11 +106,40 @@ router.get("/user/:id", async (req, res) => {
     const user = await User.findById(req.params.id).exec();
     if (!user) return res.status(400).json({ error: "User not found" });
 
-    const { _id, first_name, last_name, location, description, occupation } = user;
-    res.status(200).json({ _id, first_name, last_name, location, description, occupation });
+    const {
+      _id,
+      first_name,
+      last_name,
+      location,
+      description,
+      occupation,
+    } = user;
+    res
+      .status(200)
+      .json({
+        _id,
+        first_name,
+        last_name,
+        location,
+        description,
+        occupation,
+      });
   } catch (err) {
     res.status(400).json({ error: "Invalid user ID" });
   }
+});
+
+// Thông tin người dùng hiện tại (GET /api/me)
+router.get("/me", (req, res) => {
+  if (!req.session.user_id) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+  User.findById(req.session.user_id, "-password")
+    .then((user) => {
+      if (!user) return res.status(404).json({ error: "User not found" });
+      res.json(user);
+    })
+    .catch(() => res.status(500).json({ error: "Server error" }));
 });
 
 module.exports = router;
