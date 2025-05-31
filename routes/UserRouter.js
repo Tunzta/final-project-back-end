@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
+const jwt = require("jsonwebtoken");
 const User = require("../db/userModel");
+const authenticateJWT = require("../middleware/authenticateJWT"); // Thêm dòng này
 
 // Đăng ký tài khoản mới (POST /api/user)
 router.post("/user", async (req, res) => {
@@ -50,8 +52,17 @@ router.post("/admin/login", async (req, res) => {
     if (!user || user.password !== password)
       return res.status(401).json({ error: "Invalid credentials" });
 
-    // Lưu user_id vào session
-    req.session.user_id = user._id;
+    // Tạo JWT
+    const token = jwt.sign(
+      {
+        _id: user._id,
+        login_name: user.login_name,
+        first_name: user.first_name,
+        last_name: user.last_name,
+      },
+      "photoapp-secret",
+      { expiresIn: "1d" }
+    );
 
     const {
       _id,
@@ -63,34 +74,31 @@ router.post("/admin/login", async (req, res) => {
       login_name: name,
     } = user;
     res.status(200).json({
-      _id,
-      login_name: name,
-      first_name,
-      last_name,
-      location,
-      description,
-      occupation,
+      token,
+      user: {
+        _id,
+        login_name: name,
+        first_name,
+        last_name,
+        location,
+        description,
+        occupation,
+      },
     });
   } catch (err) {
+    console.error("Login error:", err);
     res.status(500).json({ error: "Login error" });
   }
 });
 
 // Logout (POST /api/admin/logout)
 router.post("/admin/logout", (req, res) => {
-  if (!req.session.user_id) {
-    return res.status(400).json({ error: "Not logged in" });
-  }
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({ error: "Logout failed" });
-    }
-    res.status(200).json({ message: "Logout successful" });
-  });
+  // Với JWT stateless, logout chỉ cần client xóa token
+  res.status(200).json({ message: "Logout successful (stateless)" });
 });
 
 // Danh sách người dùng (GET /api/user/list)
-router.get("/user/list", async (req, res) => {
+router.get("/user/list", authenticateJWT , async (req, res) => {
   try {
     const users = await User.find({}, "_id first_name last_name").exec();
     res.status(200).json(users);
@@ -100,7 +108,7 @@ router.get("/user/list", async (req, res) => {
 });
 
 // Chi tiết người dùng theo ID (GET /api/user/:id)
-router.get("/user/:id", async (req, res) => {
+router.get("/user/:id", authenticateJWT, async (req, res) => {
   try {
     const user = await User.findById(req.params.id).exec();
     if (!user) return res.status(400).json({ error: "User not found" });
@@ -129,11 +137,12 @@ router.get("/user/:id", async (req, res) => {
 });
 
 // Thông tin người dùng hiện tại (GET /api/me)
-router.get("/me", (req, res) => {
-  if (!req.session.user_id) {
+router.get("/me", authenticateJWT, (req, res) => {
+  // Lấy user từ JWT đã được middleware authenticateJWT gắn vào req.user
+  if (!req.user || !req.user._id) {
     return res.status(401).json({ error: "Not authenticated" });
   }
-  User.findById(req.session.user_id, "-password")
+  User.findById(req.user._id, "-password")
     .then((user) => {
       if (!user) return res.status(404).json({ error: "User not found" });
       res.json(user);

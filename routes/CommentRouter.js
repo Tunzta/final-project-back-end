@@ -7,8 +7,11 @@ const User = require("../db/userModel");
 router.post("/commentsOfPhoto/:photo_id", async (req, res) => {
   const { photo_id } = req.params;
   const { comment } = req.body;
-  const userId = req.session.user_id;
+  const userId = req.user && req.user._id; // Lấy userId từ JWT
 
+  if (!userId) {
+    return res.status(401).send("Not authenticated");
+  }
   if (!comment || !comment.trim()) {
     return res.status(400).send("Comment cannot be empty");
   }
@@ -31,7 +34,7 @@ router.post("/commentsOfPhoto/:photo_id", async (req, res) => {
     photo.comments.push(newComment);
     await photo.save();
 
-    res.status(201).json(newComment); // Trả về trực tiếp object sẽ giữ đúng định dạng ObjectId và Date
+    res.status(201).json(newComment);
   } catch (err) {
     console.error("Error in /commentsOfPhoto:", err);
     res.status(500).send("Server error");

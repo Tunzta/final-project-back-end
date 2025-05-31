@@ -67,8 +67,9 @@ router.get("/:id", async (req, res) => {
 // Route upload ảnh mới cho user: POST /photos/new
 router.post("/photos/new", upload.single("photo"), async (req, res) => {
   try {
-    const userId = req.session.user_id;
-    console.log("Session user_id:", userId);
+    // Lấy userId từ JWT (req.user do authenticateJWT gắn vào)
+    const userId = req.user && req.user._id;
+    console.log("JWT user_id:", userId);
 
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
