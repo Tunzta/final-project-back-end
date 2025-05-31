@@ -14,7 +14,7 @@ dbConnect();
 
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: "https://rckmlw-3000.csb.app",
     credentials: true,
   })
 );
@@ -35,7 +35,9 @@ app.get("/", (req, res) => {
 // Middleware bắt lỗi toàn cục
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ error: "Internal Server Error", message: err.message });
+  res
+    .status(500)
+    .json({ error: "Internal Server Error", message: err.message });
 });
 
 app.listen(8081, () => {
