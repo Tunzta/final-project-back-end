@@ -86,7 +86,6 @@ router.post("/admin/logout", (req, res) => {
       return res.status(500).json({ error: "Logout failed" });
     }
     res.status(200).json({ message: "Logout successful" });
-    res.redirect("/");
   });
 });
 

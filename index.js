@@ -7,6 +7,7 @@ const path = require("path");
 const dbConnect = require("./db/dbConnect");
 const UserRouter = require("./routes/UserRouter");
 const PhotoRouter = require("./routes/PhotoRouter");
+const CommentRouter = require("./routes/CommentRouter");
 
 // Kết nối MongoDB
 dbConnect();
@@ -50,6 +51,7 @@ app.use((req, res, next) => {
 app.use("/images", express.static(path.join(__dirname, "images")));
 app.use("/api", UserRouter);
 app.use("/api/photosOfUser", PhotoRouter);
+app.use("/api", CommentRouter);
 
 app.get("/", (req, res) => {
   res.send({ message: "Hello from photo-sharing app API!" });
