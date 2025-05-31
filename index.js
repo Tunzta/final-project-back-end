@@ -27,7 +27,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      maxAge: 30 * 60 * 1000, // 30 phút
+      maxAge: 30 * 60 * 10000, // 30 phút
       httpOnly: true
     },
   })
